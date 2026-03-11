@@ -3,7 +3,7 @@
 Because many people will be working on this, we have set up a system so that there are little to no merging issues.
 
 ## How to contribute
-
+<!-- yes -->
 1. Make sure you have a **fork** of this repository like so:<br>
 
    <img width="516" src="https://github.com/user-attachments/assets/3fc65d22-05ad-434c-8d20-74b24d782800" />
