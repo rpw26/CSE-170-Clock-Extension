@@ -1,113 +1,100 @@
 const store = require("../data/store");
 const {
-  updateSessionPhase,
-  getTimeLeftMs
+  syncTimer,
+  startTimer,
+  stopTimer,
+  pauseTimer,
+  resumeTimer,
+  resetTimer
 } = require("../services/sessionService");
 
-function getSession(req, res) {
-  updateSessionPhase();
+function getTimer(req, res) {
+  syncTimer();
 
   return res.json({
     success: true,
-    data: {
-      ...store.session,
-      timeLeftMs: getTimeLeftMs()
-    }
+    data: store.timer
   });
 }
 
-function startSession(req, res) {
-  const {
-    studyMinutes = 45,
-    breakMinutes = 5,
-    finalStudyMinutes = 10,
-    blockedSites = [
-      "youtube.com",
-      "www.youtube.com",
-      "instagram.com",
-      "www.instagram.com",
-      "tiktok.com",
-      "www.tiktok.com"
-    ]
-  } = req.body;
+function handleStartTimer(req, res) {
+  try {
+    const { mode = "pomodoro", customMinutes = null } = req.body;
 
-  if (
-    typeof studyMinutes !== "number" ||
-    typeof breakMinutes !== "number" ||
-    typeof finalStudyMinutes !== "number"
-  ) {
+    const timer = startTimer(mode, customMinutes);
+
+    return res.json({
+      success: true,
+      message: "Timer started",
+      data: timer
+    });
+  } catch (error) {
     return res.status(400).json({
       success: false,
-      message: "Session times must be numbers"
+      message: error.message
     });
   }
+}
 
-  if (studyMinutes <= 0 || breakMinutes < 0 || finalStudyMinutes < 0) {
+function handleStopTimer(req, res) {
+  const timer = stopTimer();
+
+  return res.json({
+    success: true,
+    message: "Timer stopped",
+    data: timer
+  });
+}
+
+function handlePauseTimer(req, res) {
+  try {
+    const timer = pauseTimer();
+
+    return res.json({
+      success: true,
+      message: "Timer paused",
+      data: timer
+    });
+  } catch (error) {
     return res.status(400).json({
       success: false,
-      message: "Session times must be valid positive values"
+      message: error.message
     });
   }
-
-  const now = Date.now();
-
-  store.session = {
-    active: true,
-    currentPhase: "study",
-    studyMinutes,
-    breakMinutes,
-    finalStudyMinutes,
-    startedAt: now,
-    phaseStartedAt: now,
-    blockedSites: Array.isArray(blockedSites) ? blockedSites : [],
-    alarmActive: false,
-    challengeQuestion: null,
-    challengeAnswer: null,
-    unlockUntil: null
-  };
-
-  return res.json({
-    success: true,
-    message: "Session started",
-    data: store.session
-  });
 }
 
-function stopSession(req, res) {
-  store.session = {
-    ...store.session,
-    active: false,
-    currentPhase: "idle",
-    startedAt: null,
-    phaseStartedAt: null,
-    alarmActive: false,
-    challengeQuestion: null,
-    challengeAnswer: null,
-    unlockUntil: null
-  };
+function handleResumeTimer(req, res) {
+  try {
+    const timer = resumeTimer();
 
-  return res.json({
-    success: true,
-    message: "Session stopped",
-    data: store.session
-  });
+    return res.json({
+      success: true,
+      message: "Timer resumed",
+      data: timer
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
 }
 
-function getTimeLeft(req, res) {
-  updateSessionPhase();
+function handleResetTimer(req, res) {
+  const timer = resetTimer();
 
   return res.json({
     success: true,
-    data: {
-      currentPhase: store.session.currentPhase,
-      timeLeftMs: getTimeLeftMs()
-    }
+    message: "Timer reset",
+    data: timer
   });
 }
 
 module.exports = {
-  getSession,
-  startSession,
-  stopSession,
-  getTimeLeft
+  getTimer,
+  handleStartTimer,
+  handleStopTimer,
+  handlePauseTimer,
+  handleResumeTimer,
+  handleResetTimer
 };

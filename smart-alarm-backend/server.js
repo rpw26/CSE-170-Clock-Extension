@@ -1,9 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-
 const sessionRoutes = require("./routes/sessionRoutes");
-const alarmRoutes = require("./routes/alarmRoutes");
-const siteRoutes = require("./routes/siteRoutes");
 
 const app = express();
 const PORT = 3000;
@@ -14,20 +11,11 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Smart Alarm backend is running"
+    message: "Smart Alarm timer backend is running"
   });
 });
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "Backend is healthy"
-  });
-});
-
-app.use("/api/session", sessionRoutes);
-app.use("/api/alarm", alarmRoutes);
-app.use("/api/sites", siteRoutes);
+app.use("/api/timer", sessionRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

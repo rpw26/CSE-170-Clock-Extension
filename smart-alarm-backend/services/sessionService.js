@@ -1,113 +1,131 @@
 const store = require("../data/store");
 
-function getNow() {
-  return Date.now();
+function getNowSeconds() {
+  return Math.floor(Date.now() / 1000);
 }
 
-function getPhaseDurationMs(phase, session) {
-  if (phase === "study") {
-    return session.studyMinutes * 60 * 1000;
+function syncTimer() {
+  const timer = store.timer;
+
+  if (!timer.active || timer.paused || !timer.startedAt) {
+    return timer;
   }
 
-  if (phase === "break") {
-    return session.breakMinutes * 60 * 1000;
+  const now = getNowSeconds();
+  const elapsed = now - timer.startedAt;
+  const remaining = timer.durationSeconds - elapsed;
+
+  timer.timeLeftSeconds = remaining > 0 ? remaining : 0;
+
+  if (timer.timeLeftSeconds === 0) {
+    timer.active = false;
+    timer.paused = false;
+    timer.startedAt = null;
+    timer.pausedAt = null;
   }
 
-  if (phase === "final-study") {
-    return session.finalStudyMinutes * 60 * 1000;
-  }
-
-  return 0;
+  return timer;
 }
 
-function updateSessionPhase() {
-  const session = store.session;
+function startTimer(mode, customMinutes = null) {
+  let durationSeconds;
 
-  if (!session.active || !session.phaseStartedAt) {
-    return session;
+  if (mode === "pomodoro") {
+    durationSeconds = 25 * 60;
+  } else if (mode === "custom") {
+    durationSeconds = Number(customMinutes) * 60;
+  } else {
+    throw new Error("Invalid timer mode");
   }
 
-  if (
-    session.currentPhase !== "study" &&
-    session.currentPhase !== "break" &&
-    session.currentPhase !== "final-study"
-  ) {
-    return session;
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+    throw new Error("Invalid timer duration");
   }
 
-  const now = getNow();
-  const elapsed = now - session.phaseStartedAt;
-  const phaseDuration = getPhaseDurationMs(session.currentPhase, session);
+  store.timer = {
+    active: true,
+    paused: false,
+    mode,
+    durationSeconds,
+    timeLeftSeconds: durationSeconds,
+    startedAt: getNowSeconds(),
+    pausedAt: null
+  };
 
-  if (elapsed < phaseDuration) {
-    return session;
-  }
-
-  if (session.currentPhase === "study") {
-    session.currentPhase = "break";
-    session.phaseStartedAt = now;
-    return session;
-  }
-
-  if (session.currentPhase === "break") {
-    session.currentPhase = "final-study";
-    session.phaseStartedAt = now;
-    return session;
-  }
-
-  if (session.currentPhase === "final-study") {
-    session.currentPhase = "idle";
-    session.active = false;
-    session.startedAt = null;
-    session.phaseStartedAt = null;
-    session.alarmActive = false;
-    session.challengeQuestion = null;
-    session.challengeAnswer = null;
-    session.unlockUntil = null;
-    return session;
-  }
-
-  return session;
+  return store.timer;
 }
 
-function getTimeLeftMs() {
-  const session = store.session;
-  updateSessionPhase();
+function stopTimer() {
+  store.timer = {
+    active: false,
+    paused: false,
+    mode: store.timer.mode,
+    durationSeconds: store.timer.durationSeconds,
+    timeLeftSeconds: 0,
+    startedAt: null,
+    pausedAt: null
+  };
 
-  if (!session.active || !session.phaseStartedAt) {
-    return 0;
-  }
-
-  const phaseDuration = getPhaseDurationMs(session.currentPhase, session);
-  const elapsed = getNow() - session.phaseStartedAt;
-  const remaining = phaseDuration - elapsed;
-
-  return remaining > 0 ? remaining : 0;
+  return store.timer;
 }
 
-function isTemporarilyUnlocked() {
-  const session = store.session;
+function pauseTimer() {
+  const timer = store.timer;
+  syncTimer();
 
-  if (!session.unlockUntil) {
-    return false;
+  if (!timer.active) {
+    throw new Error("No active timer to pause");
   }
 
-  return getNow() < session.unlockUntil;
+  if (timer.paused) {
+    throw new Error("Timer is already paused");
+  }
+
+  timer.paused = true;
+  timer.pausedAt = getNowSeconds();
+
+  return timer;
 }
 
-function isBlockedUrl(url) {
-  const session = store.session;
+function resumeTimer() {
+  const timer = store.timer;
 
-  if (!url || typeof url !== "string") {
-    return false;
+  if (!timer.active) {
+    throw new Error("No active timer to resume");
   }
 
-  return session.blockedSites.some((site) => url.includes(site));
+  if (!timer.paused) {
+    throw new Error("Timer is not paused");
+  }
+
+  timer.paused = false;
+  timer.startedAt = getNowSeconds() - (timer.durationSeconds - timer.timeLeftSeconds);
+  timer.pausedAt = null;
+
+  return timer;
+}
+
+function resetTimer() {
+  const timer = store.timer;
+
+  store.timer = {
+    active: false,
+    paused: false,
+    mode: timer.mode,
+    durationSeconds: timer.durationSeconds,
+    timeLeftSeconds: timer.durationSeconds,
+    startedAt: null,
+    pausedAt: null
+  };
+
+  return store.timer;
 }
 
 module.exports = {
-  updateSessionPhase,
-  getTimeLeftMs,
-  isTemporarilyUnlocked,
-  isBlockedUrl
+  syncTimer,
+  startTimer,
+  stopTimer,
+  pauseTimer,
+  resumeTimer,
+  resetTimer
 };

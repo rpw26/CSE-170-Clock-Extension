@@ -1,28 +1,12 @@
 const store = {
-  session: {
+  timer: {
     active: false,
-    currentPhase: "idle",
-    studyMinutes: 45,
-    breakMinutes: 5,
-    finalStudyMinutes: 10,
-
+    paused: false,
+    mode: "pomodoro", // pomodoro or custom
+    durationSeconds: 1500,
+    timeLeftSeconds: 1500,
     startedAt: null,
-    phaseStartedAt: null,
-
-    blockedSites: [
-      "youtube.com",
-      "www.youtube.com",
-      "instagram.com",
-      "www.instagram.com",
-      "tiktok.com",
-      "www.tiktok.com"
-    ],
-
-    alarmActive: false,
-    challengeQuestion: null,
-    challengeAnswer: null,
-
-    unlockUntil: null
+    pausedAt: null
   }
 };
 
